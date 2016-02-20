@@ -36,10 +36,14 @@ repositories {
     flatDir {
         dirs external_lib_prefix + '/aar'
     }
+    maven {
+        url external_lib_prefix + '/../myorepository'
+    }
 }
 
 dependencies {
     compile 'org.rajawali3d:rajawali:1.0.294-SNAPSHOT@aar'
-    compile (name: 'tango_support_java_lib', ext: 'aar')
+    compile('com.thalmic:myosdk:0.10.+@aar')
+    compile name: 'tango_support_java_lib', ext: 'aar'
     compile project(':TangoUtils')
 }
