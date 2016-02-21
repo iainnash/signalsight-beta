@@ -96,6 +96,10 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
     private Hub hub;
     private AtomicBoolean mIsConnected = new AtomicBoolean(false);
     private double mCameraPoseTimestamp = 0;
+    private int gridWidth = 20;
+    private int gridHeight = 13;
+
+    private int[][] grid = new int[gridHeight][gridWidth];
 
 
 
@@ -136,8 +140,8 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
             atIndex = 0;
         } else {
             for (int i = 0; i < 6; i++) {
-                if (!grid[atIndex][i]) {
-                    soundPool.play(soundHash.get(i*2), i%2==0?1.0f:0.0f, i%2==1?1.0f:0.0f, 1, 0, i);
+                if (grid[i*2][atIndex] == 0) {
+                    soundPool.play(soundHash.get(i), i%2==0?1.0f:0.0f, i%1==1?1.0f:0.0f, 1, 0, i);
                 }
             }
             atIndex++;
@@ -334,15 +338,68 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
         });
     }
 
+    private float getAveragedDepth(FloatBuffer pointCloudBuffer){
+        int pointCount = pointCloudBuffer.capacity() / 3;
+        float totalZ = 0;
+        float averageZ = 0;
+        for (int i = 0; i < pointCloudBuffer.capacity() - 3; i = i + 3) {
+            totalZ = totalZ + pointCloudBuffer.get(i + 2);
+        }
+        if (pointCount != 0)
+            averageZ = totalZ / pointCount;
+        return  averageZ;
+    }
+
     private float distanceCheck(float[] xyz) {
         return (float)Math.sqrt(Math.pow(xyz[0], 2) + Math.pow(xyz[1], 2) + Math.pow(xyz[2], 2));
     }
 
-    private void boolMatrix(float tolerance){
-        int gridWidth = 20;
-        int gridHeight = 13;
+    public boolean collision(){
+        int height=0;
+        for (int i=12; i>3; --i){
+            for (int j=2; j<=17; ++j){
+                if (grid[i][j] == 1 && grid[i][j+1] == 1){
+                    height++;
+                }
+            }
+        }
+        if (height > 1){
+            return true;
+        } else {
+            return false;
+        }
+    }
 
-        int[][] grid = new int[gridHeight][gridWidth];
+    public void leftRight(){
+        int leftEmpty=0;
+        int rightEmpty=0;
+        for (int j=12; j>=0; --j){
+            for (int i=0; i<10; ++i){
+                if (grid[j][i] == 0){
+                    leftEmpty++;
+                }
+            }
+        }
+
+        for (int j=12; j>=0; --j){
+            for (int i=10; i<20; ++i){
+                if (grid[j][i] == 0){
+                    rightEmpty++;
+                }
+            }
+        }
+/*
+        if (leftEmpty > rightEmpty){
+            vibrate();
+        } else {
+            vibrate();
+            vibrate();
+        }
+        */
+    }
+
+    private void boolMatrix(float tolerance){
+
         for (int i=0; i<gridHeight; ++i){
             for (int j=0; j<gridWidth; ++j){
                 grid[i][j] = 0;
@@ -368,11 +425,15 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
                 }
 
             }
-            //Log.d("Hello", Utils.AryToString(grid));
+        if (collision() && getAveragedDepth(latestXyzIj.xyz) <= tolerance){
+            leftRight();
         }
     }
+    }
 
+    private void StairChecker(TangoXyzIjData latestXyzIj){
 
+    }
 
 
     /**
