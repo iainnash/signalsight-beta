@@ -7,6 +7,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import com.thalmic.myo.Hub;
+import com.thalmic.myo.Myo;
 import com.thalmic.myo.scanner.ScanActivity;
 
 /**
@@ -24,6 +25,12 @@ public class CustomScanActivity extends ScanActivity {
             finish();
             return;
         }
+
+
+        if (hub.getConnectedDevices().size() > 0){
+            hub.getConnectedDevices().get(0).vibrate(Myo.VibrationType.MEDIUM);
+        }
+
 
         super.onCreate(savedInstanceState);
 
