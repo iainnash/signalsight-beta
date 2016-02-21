@@ -17,11 +17,15 @@
 package com.projecttango.experiments.augmentedrealitysample;
 
 import android.app.Activity;
+import android.content.Context;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.google.atap.tangoservice.Tango;
 import com.google.atap.tangoservice.Tango.OnTangoUpdateListener;
@@ -36,6 +40,7 @@ import com.google.atap.tangoservice.TangoXyzIjData;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -92,6 +97,55 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
     private AtomicBoolean mIsConnected = new AtomicBoolean(false);
     private double mCameraPoseTimestamp = 0;
 
+
+
+
+    private TimerTask task;
+    private HashMap<Integer, Integer> soundHash;
+    private SoundPool soundPool;
+    private int atIndex;
+    private Timer timer;
+
+
+    public void initSound() {
+        soundPool = new SoundPool(20, AudioManager.STREAM_MUSIC, 0);
+        soundHash = new HashMap<Integer, Integer>();
+        Context context = this;
+        soundHash.put(0, (soundPool.load(context, R.raw.g1s, 1)));
+        soundHash.put(1, (soundPool.load(context, R.raw.g2s, 2)));
+        soundHash.put(2, (soundPool.load(context, R.raw.g3s, 3)));
+        soundHash.put(3, (soundPool.load(context, R.raw.c1s, 4)));
+        soundHash.put(4, (soundPool.load(context, R.raw.c2s, 5)));
+        soundHash.put(5, (soundPool.load(context, R.raw.c4s, 5)));
+        soundHash.put(6, (soundPool.load(context, R.raw.e1s, 4)));
+        soundHash.put(7, (soundPool.load(context, R.raw.e2s, 5)));
+        soundHash.put(8, (soundPool.load(context, R.raw.e3s, 5)));
+    }
+
+    public void initPlayer() {
+        atIndex = 0;
+        timer = new Timer();
+        timer.scheduleAtFixedRate(task, 0, 200);
+    }
+
+    private void rings() {
+        if (grid == null) return;
+        // width: 20, height: 13
+        if (atIndex == 20) {
+            soundPool.play(soundHash.get(4), 0.8f,0.8f,0,0,5);
+            atIndex = 0;
+        } else {
+            for (int i = 0; i < 6; i++) {
+                if (!grid[atIndex][i]) {
+                    soundPool.play(soundHash.get(i*2), i%2==0?1.0f:0.0f, i%2==1?1.0f:0.0f, 1, 0, i);
+                }
+            }
+            atIndex++;
+        }
+
+    }
+
+
     // No need to add any coordinate frame pairs since we are not
     // using pose data. So just initialize.
     private ArrayList<TangoCoordinateFramePair> framePairs =
@@ -105,6 +159,12 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        task = new TimerTask() {
+            @Override
+            public void run() {
+                rings();
+            }
+        };
         mGLView = new TangoRajawaliView(this);
         mRenderer = new AugmentedRealityRenderer(this);
         mGLView.setSurfaceRenderer(mRenderer);
@@ -152,6 +212,7 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
     @Override
     protected void onResume() {
         super.onResume();
+
         if (mIsConnected.compareAndSet(false, true)) {
             try {
                 connectTango();
@@ -162,6 +223,9 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
                         Toast.LENGTH_SHORT).show();
             }
         }
+
+        initSound();
+        initPlayer();
     }
 
     /**
@@ -304,9 +368,11 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
                 }
 
             }
-            Log.d("Hello", Utils.AryToString(grid));
+            //Log.d("Hello", Utils.AryToString(grid));
         }
     }
+
+
 
 
     /**
