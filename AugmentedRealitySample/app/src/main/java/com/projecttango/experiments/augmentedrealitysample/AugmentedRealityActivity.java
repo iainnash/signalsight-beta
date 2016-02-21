@@ -46,6 +46,8 @@ import com.projecttango.rajawali.ar.TangoRajawaliView;
 import com.projecttango.tangosupport.TangoPointCloudManager;
 import com.projecttango.tangosupport.TangoSupport;
 import com.projecttango.tangosupport.TangoSupport.IntersectionPointPlaneModelPair;
+import com.thalmic.myo.Hub;
+import com.thalmic.myo.Myo;
 
 import org.rajawali3d.scene.ASceneFrameCallback;
 
@@ -86,6 +88,7 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
     private DeviceExtrinsics mExtrinsics;
     private TangoPointCloudManager mPointCloudManager;
     private Tango mTango;
+    private Hub hub;
     private AtomicBoolean mIsConnected = new AtomicBoolean(false);
     private double mCameraPoseTimestamp = 0;
 
@@ -109,6 +112,7 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
         mTango = new Tango(this);
         mPointCloudManager = new TangoPointCloudManager();
         setContentView(mGLView);
+        hub = Hub.getInstance();
     }
 
     @Override
@@ -136,6 +140,12 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
             mRenderer.getCurrentScene().clearFrameCallbacks();
             mGLView.disconnectCamera();
             mTango.disconnect();
+        }
+    }
+
+    private void vibrate() {
+        if (hub.getConnectedDevices().size() > 0) {
+            hub.getConnectedDevices().get(0).vibrate(Myo.VibrationType.MEDIUM);
         }
     }
 
