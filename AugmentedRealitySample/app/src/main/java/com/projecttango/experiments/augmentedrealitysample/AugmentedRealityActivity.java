@@ -34,7 +34,10 @@ import com.google.atap.tangoservice.TangoOutOfDateException;
 import com.google.atap.tangoservice.TangoPoseData;
 import com.google.atap.tangoservice.TangoXyzIjData;
 
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.projecttango.rajawali.DeviceExtrinsics;
@@ -86,9 +89,15 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
     private AtomicBoolean mIsConnected = new AtomicBoolean(false);
     private double mCameraPoseTimestamp = 0;
 
+    // No need to add any coordinate frame pairs since we are not
+    // using pose data. So just initialize.
+    private ArrayList<TangoCoordinateFramePair> framePairs =
+            new ArrayList<TangoCoordinateFramePair>();
+
     public static final TangoCoordinateFramePair FRAME_PAIR = new TangoCoordinateFramePair(
             TangoPoseData.COORDINATE_FRAME_START_OF_SERVICE,
             TangoPoseData.COORDINATE_FRAME_DEVICE);
+    private Timer mTimer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +109,24 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
         mTango = new Tango(this);
         mPointCloudManager = new TangoPointCloudManager();
         setContentView(mGLView);
+    }
+
+    @Override
+    protected void onStop() {
+        mTimer.cancel();
+        super.onStop();
+    }
+
+    @Override
+    protected void onStart() {
+        mTimer = new Timer();
+        mTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                boolMatrix(7f);
+            }
+        }, 100, 500);
+        super.onStart();
     }
 
     @Override
@@ -143,10 +170,6 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
         config.putBoolean(TangoConfig.KEY_BOOLEAN_DEPTH, true);
         mTango.connect(config);
 
-        // No need to add any coordinate frame pairs since we are not
-        // using pose data. So just initialize.
-        ArrayList<TangoCoordinateFramePair> framePairs =
-                new ArrayList<TangoCoordinateFramePair>();
         mTango.connectListener(framePairs, new OnTangoUpdateListener() {
             @Override
             public void onPoseAvailable(TangoPoseData pose) {
@@ -236,6 +259,45 @@ public class AugmentedRealityActivity extends Activity implements View.OnTouchLi
             }
         });
     }
+
+    private float distanceCheck(float[] xyz) {
+        return (float)Math.sqrt(Math.pow(xyz[0], 2) + Math.pow(xyz[1], 2) + Math.pow(xyz[2], 2));
+    }
+
+    private void boolMatrix(float tolerance){
+        int gridWidth = 20;
+        int gridHeight = 13;
+
+        int[][] grid = new int[gridHeight][gridWidth];
+        for (int i=0; i<gridHeight; ++i){
+            for (int j=0; j<gridWidth; ++j){
+                grid[i][j] = 0;
+            }
+        }
+
+        TangoXyzIjData latestXyzIj = mPointCloudManager.getLatestXyzIj();
+        if (latestXyzIj != null){
+            final FloatBuffer buf = latestXyzIj.xyz;
+            for (int i = 0; i < latestXyzIj.xyzCount; i++){
+                float point[] = new float[3];
+                point[0] = buf.get(i*3);
+                point[1] = buf.get(i*3+1);
+                point[2] = buf.get(i*3+2);
+                //Log.d("rr", point[0]+","+point[1]+","+point[2]);
+                //Log.d("Distance: ",Float.toString(distanceCheck(point)));
+                if (point[0] >= -1.0f && point[0] < 1.0f &&
+                        point[1] >= -1.0f && point[1] < 1.0f){
+                    if (distanceCheck(point) < tolerance) {
+                        grid[(int) ((point[1] + 1.0f) * 6)][(int) ((point[0] + 1.0f) * 10)] = 1;
+                    }
+
+                }
+
+            }
+            Log.d("Hello", Utils.AryToString(grid));
+        }
+    }
+
 
     /**
      * Calculates and stores the fixed transformations between the device and
